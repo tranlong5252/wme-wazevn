@@ -17,7 +17,8 @@ module.exports = {
   match: ["*://www.waze.com/editor*", "*://www.waze.com/*/editor*"],
   require: [
     `https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js`,
-    `https://greasyfork.org/scripts/449165-wme-wazemy-trafcamlist/code/wme-wazemy-trafcamlist.js`,
+    //`https://greasyfork.org/scripts/449165-wme-wazemy-trafcamlist/code/wme-wazemy-trafcamlist.js`,
+    `https://greasyfork.org/scripts/497466-wme-wazevn-traffic-cams-list/code/wme-wazevn-traffic-cams-list.js`,
   ],
   grant: ["GM_xmlhttpRequest"],
   connect: [
@@ -26,6 +27,7 @@ module.exports = {
     "t2.fgies.com",
     "jalanow.com",
     "llm.gov.my",
+    "camera.thongtingiaothong.vn"
   ],
   "run-at": "document-end",
 };

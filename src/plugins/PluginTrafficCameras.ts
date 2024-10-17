@@ -2,12 +2,48 @@ import IPlugin from "../IPlugin";
 import PluginManager from "../PluginManager";
 import SettingsStorage from "../SettingsStorage";
 
+class TrafficCam {
+  desc: string;
+  lat: number;
+  lon: number;
+  url: { [key: string]: string };
+
+  constructor(
+    desc: string,
+    lat: number,
+    lon: number,
+    url: { [key: string]: string },
+  ) {
+    this.desc = desc;
+    this.lat = lat;
+    this.lon = lon;
+    this.url = url;
+  }
+}
+
 export default class PluginTrafficCameras implements IPlugin {
   private trafcamLayer: any;
 
   constructor() {
+    //this.convert();
     this.initialize();
   }
+
+  // convert(): void {
+  //   trafficCamsData.length = 0;
+
+  //   //HCMC
+  //   data.value.forEach((rawCam: any) => {
+  //       if (rawCam[2] != null) {
+  //         var point: string = rawCam[4][0][1].replace("POINT(", "").replace(")", "").split(" ")
+  //           var lat: number = parseFloat(point[1]);
+  //           var lon: number = parseFloat(point[0]);
+  //         trafficCamsData.push(new TrafficCam(rawCam[13], lat, lon, { HCMC: "http://camera.thongtingiaothong.vn/api/snapshot/"+rawCam[2]}));
+  //       }
+
+  //   });
+  //   console.log(trafficCamsData);
+  // }
 
   initialize(): void {
     // Add settings into view.
@@ -252,7 +288,7 @@ export default class PluginTrafficCameras implements IPlugin {
     for (let urlsrc in e.object.url) {
       if (urlsrc === "LLM" && e.object.url["LLM"].split("|").length == 2) {
         popup_appendOption(urlsrc);
-      } else if (urlsrc === "Jalanow") {
+      } else if (urlsrc === "Jalanow" || urlsrc === "HCMC") {
         popup_appendOption(urlsrc);
       }
     }
@@ -271,6 +307,9 @@ export default class PluginTrafficCameras implements IPlugin {
         case "LLM":
           popup_getLLMImage(trafficCamsData[camId.innerText]["url"]["LLM"]);
           break;
+        case "HCMC":
+          popup_getHCMCImage(trafficCamsData[camId.innerText]["url"]["HCMC"]);
+          break;
       }
     };
 
@@ -282,6 +321,8 @@ export default class PluginTrafficCameras implements IPlugin {
       case "LLM":
         popup_getLLMImage(e.object.url["LLM"]);
         break;
+      case "HCMC":
+        popup_getHCMCImage(e.object.url["HCMC"]);
     }
 
     function popupCam_close() {
@@ -388,6 +429,32 @@ export default class PluginTrafficCameras implements IPlugin {
             "staticimage",
           ) as HTMLImageElement;
           staticImageEl.src = "data:image/png;base64," + m[1];
+          document.getElementById("mycamstatus").innerHTML = "";
+        },
+        onerror: function (response) {
+          document.getElementById("mycamstatus").innerHTML =
+            "Error loading image.";
+        },
+        onprogress: function (response) {
+          document.getElementById("mycamstatus").innerHTML = "Loading image...";
+        },
+      });
+    }
+
+    function popup_getHCMCImage(url: string) {
+      GM_xmlhttpRequest({
+        method: "GET",
+        responseType: "blob",
+        headers: {
+          accept:
+            "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+        },
+        url: url,
+        onload: function (response) {
+          const staticImageEl = document.getElementById(
+            "staticimage",
+          ) as HTMLImageElement;
+          staticImageEl.src = URL.createObjectURL(response.response);
           document.getElementById("mycamstatus").innerHTML = "";
         },
         onerror: function (response) {
