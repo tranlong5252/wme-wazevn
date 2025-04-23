@@ -29,21 +29,46 @@ export default class PluginTrafficCameras implements IPlugin {
     this.initialize();
   }
 
-  // convert(): void {
-  //   trafficCamsData.length = 0;
-
-  //   //HCMC
-  //   data.value.forEach((rawCam: any) => {
-  //       if (rawCam[2] != null) {
-  //         var point: string = rawCam[4][0][1].replace("POINT(", "").replace(")", "").split(" ")
-  //           var lat: number = parseFloat(point[1]);
-  //           var lon: number = parseFloat(point[0]);
-  //         trafficCamsData.push(new TrafficCam(rawCam[13], lat, lon, { HCMC: "http://camera.thongtingiaothong.vn/api/snapshot/"+rawCam[2]}));
-  //       }
-
-  //   });
-  //   console.log(trafficCamsData);
-  // }
+  convert(): void {
+    //   trafficCamsData.length = 0;
+    //   data.value.forEach((rawCam: any) => {
+    //       if (rawCam[2] != null) {
+    //         var point: string = rawCam[4][0][1].replace("POINT(", "").replace(")", "").split(" ")
+    //           var lat: number = parseFloat(point[1]);
+    //           var lon: number = parseFloat(point[0]);
+    //         trafficCamsData.push(new TrafficCam(rawCam[13], lat, lon, { HCMC: "http://camera.thongtingiaothong.vn/api/snapshot/"+rawCam[2]}));
+    //       }
+    //   });
+    // GM_xmlhttpRequest({
+    //   method: "POST",
+    //   url: "https://camera.0511.vn/modules/markmap/funcs/main.aspx/GetMarkMapsJSON",
+    //   headers: {
+    //     "Content-Type": "application/json",
+    //   },
+    //   data: JSON.stringify({ 'idMapType': '-1,2', 'idLocation': '-1,14,5,2,4,6,7,50,56,67', 'strsearchmap': '' }),
+    //   onload: function (response) {
+    //     if (response.status === 200) {
+    //       const data = JSON.parse(JSON.parse(response.response).d);
+    //       data.forEach((rawCam: any) => {
+    //         const location = rawCam.location.split(",");
+    //         const lat = parseFloat(location[0]);
+    //         const lon = parseFloat(location[1]);
+    //         const name = rawCam.name;
+    //         const linkMatch = rawCam.message.match(new RegExp("viewMap\\('https://www\\.youtube\\.com/watch\\?v=[\\w-]+"));
+    //         const link = linkMatch ? linkMatch[0] : 'none';
+    //         const camera = new TrafficCam(name, lat, lon, { DaNang: link.replace("viewMap('", "") });
+    //         trafficCamsData.push(camera);
+    //       });
+    //     } else {
+    //       console.error("Failed to fetch data:", response.statusText);
+    //     }
+    //   },
+    //   onerror: function (response) {
+    //     console.error("Request failed:", response.statusText);
+    //   },
+    // });
+    // console.log(trafficCamsData);
+  }
 
   initialize(): void {
     // Add settings into view.
@@ -288,7 +313,11 @@ export default class PluginTrafficCameras implements IPlugin {
     for (let urlsrc in e.object.url) {
       if (urlsrc === "LLM" && e.object.url["LLM"].split("|").length == 2) {
         popup_appendOption(urlsrc);
-      } else if (urlsrc === "Jalanow" || urlsrc === "HCMC") {
+      } else if (
+        urlsrc === "Jalanow" ||
+        urlsrc === "HCMC" ||
+        urlsrc === "DaNang"
+      ) {
         popup_appendOption(urlsrc);
       }
     }
@@ -310,6 +339,10 @@ export default class PluginTrafficCameras implements IPlugin {
         case "HCMC":
           popup_getHCMCImage(trafficCamsData[camId.innerText]["url"]["HCMC"]);
           break;
+        case "DaNang":
+          popup_getDaNangImage(
+            trafficCamsData[camId.innerText]["url"]["DaNang"],
+          );
       }
     };
 
@@ -323,6 +356,8 @@ export default class PluginTrafficCameras implements IPlugin {
         break;
       case "HCMC":
         popup_getHCMCImage(e.object.url["HCMC"]);
+      case "DaNang":
+        popup_getDaNangImage(e.object.url["DaNang"]);
     }
 
     function popupCam_close() {
@@ -465,6 +500,39 @@ export default class PluginTrafficCameras implements IPlugin {
           document.getElementById("mycamstatus").innerHTML = "Loading image...";
         },
       });
+    }
+
+    function popup_getDaNangImage(url: string) {
+      const staticImageEl = document.getElementById(
+        "staticimage",
+      ) as HTMLImageElement;
+      if (url.includes("youtube.com")) {
+        const videoId = url.split("v=")[1];
+        console.log(videoId);
+        staticImageEl.outerHTML = `<iframe width="400" height="300" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>`;
+      } else {
+        GM_xmlhttpRequest({
+          method: "GET",
+          responseType: "blob",
+          headers: {
+            accept:
+              "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+          },
+          url: url,
+          onload: function (response) {
+            staticImageEl.src = URL.createObjectURL(response.response);
+            document.getElementById("mycamstatus").innerHTML = "";
+          },
+          onerror: function (response) {
+            document.getElementById("mycamstatus").innerHTML =
+              "Error loading image.";
+          },
+          onprogress: function (response) {
+            document.getElementById("mycamstatus").innerHTML =
+              "Loading image...";
+          },
+        });
+      }
     }
   }
 }

@@ -27,7 +27,9 @@ module.exports = {
     "t2.fgies.com",
     "jalanow.com",
     "llm.gov.my",
-    "camera.thongtingiaothong.vn"
+    "camera.thongtingiaothong.vn",
+    "camera.0511.vn",
+    "youtube.com"
   ],
   "run-at": "document-end",
 };
