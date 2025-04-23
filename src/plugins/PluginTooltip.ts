@@ -1,9 +1,13 @@
+import { WmeSDK } from "wme-sdk-typings";
 import IPlugin from "../IPlugin";
 import PluginManager from "../PluginManager";
 import SettingsStorage from "../SettingsStorage";
 
 export default class PluginTooltip implements IPlugin {
-  constructor() {
+  private sdk: WmeSDK;
+
+  constructor(sdk: WmeSDK) {
+    this.sdk = sdk;
     this.initialize();
   }
 
@@ -45,7 +49,12 @@ export default class PluginTooltip implements IPlugin {
    * @return {void} This function does not return anything.
    */
   enable(): void {
-    WazeWrap.Events.register("mousemove", null, this.showTooltip);
+    // WazeWrap.Events.register("mousemove", null, this.showTooltip.bind(this));
+    this.sdk.Events.on({
+      eventName: "wme-map-mouse-move",
+      eventHandler: this.showTooltip.bind(this),
+    });
+
     $("#wazemyTooltip").show();
     console.log("[WazeMY] PluginTooltip enabled.");
   }
@@ -56,7 +65,11 @@ export default class PluginTooltip implements IPlugin {
    * @return {void} This function does not return anything.
    */
   disable(): void {
-    WazeWrap.Events.unregister("mousemove", null, this.showTooltip);
+    // WazeWrap.Events.unregister("mousemove", null, this.showTooltip);
+    this.sdk.Events.off({
+      eventName: "wme-map-mouse-move",
+      eventHandler: this.showTooltip.bind(this),
+    });
     $("#wazemyTooltip").hide();
     console.log("[WazeMY] PluginTooltip disabled.");
   }
@@ -98,6 +111,11 @@ export default class PluginTooltip implements IPlugin {
       );
       if (landmark) {
         output = `<b>${landmark.attributes.wazeFeature._wmeObject.attributes.name}</b><br>`;
+
+        const categories =
+          landmark.attributes.wazeFeature._wmeObject.getCategories();
+        output += `<i>[${categories.join(", ")}]</i><br>`;
+
         const address = landmark.attributes.wazeFeature._wmeObject.getAddress();
         try {
           output += address.getHouseNumber()
@@ -117,18 +135,50 @@ export default class PluginTooltip implements IPlugin {
         const segmentId = segment.attributes.wazeFeature.id;
         const address = segment.attributes.wazeFeature._wmeObject.getAddress();
         output = `<b>${address.getStreetName()}</b><br>`;
+        const altStreets = address.getAltStreets();
+        for (let i = 0; i < altStreets.length; i++) {
+          const altStreetName = altStreets[i].getStreetName();
+          output += `Alt: ${altStreetName}<br>`;
+        }
         output += `${address.getCityName()}, ${address.getStateName()}<br>`;
         output += `<b>ID:</b> ${segmentId}<br>`;
+        const direction =
+          segment.attributes.wazeFeature._wmeObject.getDirection();
+        switch (direction) {
+          case 1:
+            output += `<b>Direction:</b> A -> B<br>`;
+            break;
+          case 2:
+            output += `<b>Direction:</b> B -> A<br>`;
+            break;
+          case 3:
+            output += `<b>Direction:</b> Two way<br>`;
+            break;
+        }
         output += `<b>Lock:</b> ${segment.attributes.wazeFeature._wmeObject.getLockRank() + 1}`;
         showTooltip = true;
       }
 
       const tooltipDiv = $("#wazemyTooltip");
       if (showTooltip === true) {
+        let positions: string[] = [];
+
+        positions = document
+          .querySelector(".wz-map-ol-control-span-mouse-position")
+          .innerHTML.split(" ");
+        let pixel = this.sdk.Map.getPixelFromLonLat({
+          lonLat: {
+            lat: parseFloat(positions[0]),
+            lon: parseFloat(positions[1]),
+          },
+        });
+
         const tw = tooltipDiv.innerWidth();
         const th = tooltipDiv.innerHeight();
-        let tooltipX = e.clientX + window.scrollX + 15;
-        let tooltipY = e.clientY + window.scrollY + 15;
+
+        let tooltipX = pixel.x + window.scrollX + 15;
+        let tooltipY = pixel.y + window.scrollY + 15;
+
         // Handle cases where tooltip is too near the edge.
         if (tooltipX + tw > W.map.$map.innerWidth()) {
           tooltipX -= tw + 20; // 20 = scroll bar size

@@ -20,7 +20,7 @@ module.exports = {
     //`https://greasyfork.org/scripts/449165-wme-wazemy-trafcamlist/code/wme-wazemy-trafcamlist.js`,
     `https://greasyfork.org/scripts/497466-wme-wazevn-traffic-cams-list/code/wme-wazevn-traffic-cams-list.js`,
   ],
-  grant: ["GM_xmlhttpRequest", "GM.xmlHttpRequest"],
+  grant: ["GM_xmlhttpRequest", "GM.xmlHttpRequest", "unsafeWindow"],
   connect: [
     "p3.fgies.com",
     "p4.fgies.com",
