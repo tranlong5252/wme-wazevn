@@ -6,8 +6,11 @@ import SettingsStorage from "../SettingsStorage";
 export default class PluginTooltip implements IPlugin {
   private sdk: WmeSDK;
 
-  constructor(sdk: WmeSDK) {
-    this.sdk = sdk;
+  constructor() {
+    this.sdk = unsafeWindow.getWmeSdk({
+      scriptId: "wme-wazemy-tooltip",
+      scriptName: "WazeMY",
+    });
     this.initialize();
   }
 
@@ -52,7 +55,7 @@ export default class PluginTooltip implements IPlugin {
     // WazeWrap.Events.register("mousemove", null, this.showTooltip.bind(this));
     this.sdk.Events.on({
       eventName: "wme-map-mouse-move",
-      eventHandler: this.showTooltip.bind(this),
+      eventHandler: showTooltip,
     });
 
     $("#wazemyTooltip").show();
@@ -68,7 +71,7 @@ export default class PluginTooltip implements IPlugin {
     // WazeWrap.Events.unregister("mousemove", null, this.showTooltip);
     this.sdk.Events.off({
       eventName: "wme-map-mouse-move",
-      eventHandler: this.showTooltip.bind(this),
+      eventHandler: showTooltip,
     });
     $("#wazemyTooltip").hide();
     console.log("[WazeMY] PluginTooltip disabled.");
@@ -88,85 +91,90 @@ export default class PluginTooltip implements IPlugin {
     }
     console.log("[WazeMY] PluginTooltip settings updated.", settings);
   }
+}
 
-  /**
-   * Shows the tooltip at the mouse position.
-   *
-   * @param {MouseEvent} e - The mouse event.
-   * @return {void} This function does not return anything.
-   */
-  showTooltip(e: MouseEvent): void {
-    let output: string = "";
-    let showTooltip: boolean = false;
+/**
+ * Shows the tooltip at the mouse position.
+ *
+ * @return {void} This function does not return anything.
+ */
+function showTooltip(): void {
+  let output: string = "";
+  let showTooltip: boolean = false;
+  const sdk = unsafeWindow.getWmeSdk({
+    scriptId: "wme-wazemy",
+    scriptName: "WazeMY",
+  });
 
-    // Manual check of settings because unregistering event is not working.
-    if ($("#wazemySettings_tooltip_enable").prop("checked") === true) {
-      const landmark = W.map.venueLayer.getFeatureBy(
-        "renderIntent",
-        "highlight",
-      );
-      const segment = W.map.segmentLayer.getFeatureBy(
-        "renderIntent",
-        "highlight",
-      );
-      if (landmark) {
-        output = `<b>${landmark.attributes.wazeFeature._wmeObject.attributes.name}</b><br>`;
+  // Manual check of settings because unregistering event is not working.
+  if ($("#wazemySettings_tooltip_enable").prop("checked") === true) {
+    const landmark = W.map.venueLayer.getFeatureBy("renderIntent", "highlight");
 
-        const categories =
-          landmark.attributes.wazeFeature._wmeObject.getCategories();
-        output += `<i>[${categories.join(", ")}]</i><br>`;
+    const segment = W.map.segmentLayer.getFeatureBy(
+      "renderIntent",
+      "highlight",
+    );
+    if (landmark) {
+      const venue = sdk.DataModel.Venues.getById({
+        venueId: landmark.attributes.wazeFeature.id,
+      });
 
-        const address = landmark.attributes.wazeFeature._wmeObject.getAddress();
-        try {
-          output += address.getHouseNumber()
-            ? `${address.getHouseNumber()}, `
-            : "";
-          output += address.getStreetName()
-            ? `${address.getStreetName()}<br>`
-            : `No street<br>`;
-          output += `${address.getCityName()}, `;
-          output += `${address.getStateName()}<br>`;
-        } catch {
-          output += "No address<br>";
-        }
-        output += `<b>Lock:</b> ${landmark.attributes.wazeFeature._wmeObject.getLockRank() + 1}`;
-        showTooltip = true;
-      } else if (segment) {
-        const segmentId = segment.attributes.wazeFeature.id;
-        const address = segment.attributes.wazeFeature._wmeObject.getAddress();
-        output = `<b>${address.getStreetName()}</b><br>`;
-        const altStreets = address.getAltStreets();
-        for (let i = 0; i < altStreets.length; i++) {
-          const altStreetName = altStreets[i].getStreetName();
-          output += `Alt: ${altStreetName}<br>`;
-        }
-        output += `${address.getCityName()}, ${address.getStateName()}<br>`;
-        output += `<b>ID:</b> ${segmentId}<br>`;
-        const direction =
-          segment.attributes.wazeFeature._wmeObject.getDirection();
-        switch (direction) {
-          case 1:
-            output += `<b>Direction:</b> A -> B<br>`;
-            break;
-          case 2:
-            output += `<b>Direction:</b> B -> A<br>`;
-            break;
-          case 3:
-            output += `<b>Direction:</b> Two way<br>`;
-            break;
-        }
-        output += `<b>Lock:</b> ${segment.attributes.wazeFeature._wmeObject.getLockRank() + 1}`;
-        showTooltip = true;
+      output = venue.name ? `<b>${venue.name}</b><br>` : "";
+
+      output += `<i>[${venue.categories.join(", ")}]</i><br>`;
+
+      const venueAddress = sdk.DataModel.Venues.getAddress({
+        venueId: landmark.attributes.wazeFeature.id,
+      });
+      output += venueAddress.houseNumber ? `${venueAddress.houseNumber}, ` : "";
+      output += venueAddress.street.name
+        ? `${venueAddress.street.name}<br>`
+        : "";
+      output += `${venueAddress.city.name}, ${venueAddress.state.name}<br>`;
+
+      output += `<b>Lock:</b> ${venue.lockRank + 1}`;
+      showTooltip = true;
+    } else if (segment) {
+      const segmentId = segment.attributes.wazeFeature.id;
+      const segmentData = sdk.DataModel.Segments.getById({
+        segmentId: segmentId,
+      });
+      const address = sdk.DataModel.Segments.getAddress({
+        segmentId: segmentId,
+      });
+
+      output = address.street.name ? `<b>${address.street.name}</b><br>` : "";
+      const altStreets = address.altStreets;
+      for (let i = 0; i < altStreets.length; i++) {
+        const altStreetName = altStreets[i].street.name;
+        output += `Alt: ${altStreetName}<br>`;
       }
+      output += `${address.city.name}, ${address.state.name}<br>`;
+      output += `<b>ID:</b> ${segmentId}<br>`;
+      if (segmentData.isTwoWay) {
+        output += `<b>Direction:</b> Two way<br>`;
+      } else if (segmentData.isAtoB) {
+        output += `<b>Direction:</b> A -> B<br>`;
+      } else if (segmentData.isBtoA) {
+        output += `<b>Direction:</b> B -> A<br>`;
+      }
+      output += `<b>Lock:</b> ${segmentData.lockRank + 1}`;
+      showTooltip = true;
+    }
 
-      const tooltipDiv = $("#wazemyTooltip");
-      if (showTooltip === true) {
-        let positions: string[] = [];
+    const tooltipDiv = $("#wazemyTooltip");
+    if (showTooltip === true) {
+      let positions: string[] = [];
 
-        positions = document
-          .querySelector(".wz-map-ol-control-span-mouse-position")
-          .innerHTML.split(" ");
-        let pixel = this.sdk.Map.getPixelFromLonLat({
+      positions = document
+        .querySelector(".wz-map-ol-control-span-mouse-position")
+        .innerHTML.split(" ");
+
+      const lat = parseFloat(positions[0]);
+      const lon = parseFloat(positions[1]);
+
+      if (lat >= 0 && lon >= 0) {
+        let pixel = sdk.Map.getPixelFromLonLat({
           lonLat: {
             lat: parseFloat(positions[0]),
             lon: parseFloat(positions[1]),
@@ -196,9 +204,9 @@ export default class PluginTooltip implements IPlugin {
         tooltipDiv.css("top", `${tooltipY}px`);
         tooltipDiv.css("left", `${tooltipX}px`);
         tooltipDiv.css("visibility", "visible");
-      } else {
-        tooltipDiv.css("visibility", "hidden");
       }
+    } else {
+      tooltipDiv.css("visibility", "hidden");
     }
   }
 }

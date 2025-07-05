@@ -2,14 +2,12 @@ import "./style/main.less";
 import PluginManager from "./PluginManager";
 import { WmeSDK } from "wme-sdk-typings";
 
-const updateMessage = `Port script to WME SDK.`;
+const updateMessage: string = `Port script to WME SDK.`;
 
 var sdk: WmeSDK;
 
-async function main() {
-  console.log("[WazeMY] Script started");
-  unsafeWindow.SDK_INITIALIZED.then(initScript);
-}
+console.log("[WazeMY] Script started");
+unsafeWindow.SDK_INITIALIZED.then(initScript);
 
 function initScript() {
   if (!unsafeWindow.getWmeSdk) {
@@ -23,28 +21,37 @@ function initScript() {
   sdk.Events.once({ eventName: "wme-ready" }).then(initializeWazeMY);
 }
 
-async function initializeWazeMY() {
+function initializeWazeMY() {
   console.log("[WazeMY] WME ready");
 
   sdk.Sidebar.registerScriptTab().then(
     (sidebarResult: RegisterSidebarTabResult) => {
       sidebarResult.tabLabel.innerHTML = "WazeMY";
       sidebarResult.tabLabel.title = "WazeMY";
-      sidebarResult.tabPane.innerHTML = `<div>
-        <h4>WazeMY</h4>
-        <b>${GM_info.script.version}</b>
+      sidebarResult.tabPane.innerHTML = `
+        <wz-section-header headline="WazeMY" size="section-header2" class="settings-header">
+          <wz-overline class="headline">WazeMY</wz-overline>
+        </wz-section-header>
+        <wz-overline class="headline">${GM_info.script.version}</wz-overline>
+        <div class="settings">
+          <div class="settings__form-group">
+            <fieldset class="wazemySettings">
+              <legend class="wazemySettingsLegend">
+                <wz-label>Settings</wz-label>
+              </legend>
+              <div id="wazemySettings_settings"></div>
+            </fieldset>
+          </div>
+          <div class="settings__form-group">
+            <fieldset class="wazemySettings">
+              <legend class="wazemySettingsLegend">
+                <wz-label>Shortcuts</wz-label>
+              </legend>
+              <div id="wazemySettings_shortcuts"></div>
+            </fieldset>
+          </div>
         </div>
-        <fieldset class="wazemySettings">
-        <legend class="wazemySettingsLegend">
-          <h6>Settings</h6></legend>
-        <div id="wazemySettings_settings"></div>
-        </fieldset>
-        <fieldset class="wazemySettings">
-        <legend class="wazemySettingsLegend">
-        <h6>Shortcuts</h6></legend>
-        <div id="wazemySettings_shortcuts">
-        </div>
-        </fieldset>`;
+      `;
       WazeWrap.Interface.ShowScriptUpdate(
         "WME WazeMY",
         GM_info.script.version,
@@ -54,17 +61,12 @@ async function initializeWazeMY() {
       );
       const pluginManager = PluginManager.instance;
 
-      pluginManager.addPlugin("copylatlon", "PluginCopyLatLon", sdk);
-      pluginManager.addPlugin("tooltip", "PluginTooltip", sdk);
-      pluginManager.addPlugin("trafcam", "PluginTrafficCameras", sdk);
-      pluginManager.addPlugin("kvmr", "PluginKVMR", sdk);
-      pluginManager.addPlugin("zoompic", "PluginZoomPic", sdk);
-      pluginManager.addPlugin("places", "PluginPlaces", sdk);
+      pluginManager.addPlugin("copylatlon", "PluginCopyLatLon");
+      pluginManager.addPlugin("tooltip", "PluginTooltip");
+      pluginManager.addPlugin("trafcam", "PluginTrafficCameras");
+      pluginManager.addPlugin("kvmr", "PluginKVMR");
+      pluginManager.addPlugin("zoompic", "PluginZoomPic");
+      pluginManager.addPlugin("places", "PluginPlaces");
     },
   );
 }
-
-main().catch((e) => {
-  console.log("WazeMY: Bootstrap");
-  console.log(e);
-});

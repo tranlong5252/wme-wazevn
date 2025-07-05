@@ -1,7 +1,7 @@
 {
   "name": "wme-wazemy",
   "description": "Tampermonkey script for Waze map editing in Malaysia",
-  "version": "2025.04.22.01",
+  "version": "2025.06.18.01",
   "author": {
     "name": "junyianl",
     "email": "junyian@gmail.com"
@@ -20,6 +20,7 @@
   },
   "private": true,
   "dependencies": {
+    "@google/genai": "^1.5.1",
     "@trim21/gm-fetch": "^0.1.15",
     "jquery": "^3.7.1"
   },
@@ -31,7 +32,7 @@
   "devDependencies": {
     "@types/geojson": "^7946.0.14",
     "@types/greasemonkey": "^4.0.7",
-    "@types/jquery": "^3.5.29",
+    "@types/jquery": "^3.5.32",
     "@types/node": "^20.12.7",
     "@types/tampermonkey": "^5.0.3",
     "browserslist": "^4.23.0",
