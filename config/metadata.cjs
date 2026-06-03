@@ -27,6 +27,8 @@ module.exports = {
     "t2.fgies.com",
     "jalanow.com",
     "llm.gov.my",
+    "venue-image.waze.com",
+    "generativelanguage.googleapis.com",
     "camera.thongtingiaothong.vn",
     "https://giaothong.hochiminhcity.gov.vn:8007",
     "camera.0511.vn",

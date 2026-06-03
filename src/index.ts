@@ -2,7 +2,7 @@ import "./style/main.less";
 import PluginManager from "./PluginManager";
 import { WmeSDK } from "wme-sdk-typings";
 
-const updateMessage: string = `Port script to WME SDK.`;
+const updateMessage: string = `Version 2026.05.17.1: Restored WazeWrap.`;
 
 var sdk: WmeSDK;
 
@@ -23,6 +23,10 @@ function initScript() {
 
 function initializeWazeMY() {
   console.log("[WazeMY] WME ready");
+
+  if (WazeWrap && WazeWrap.Ready) {
+    WazeWrap.Alerts.success("wme-wazemy", "Script initialized");
+  }
 
   sdk.Sidebar.registerScriptTab().then(
     (sidebarResult: RegisterSidebarTabResult) => {
@@ -50,6 +54,14 @@ function initializeWazeMY() {
               <div id="wazemySettings_shortcuts"></div>
             </fieldset>
           </div>
+          <div class="settings__form-group">
+            <fieldset class="wazemySettings">
+              <legend class="wazemySettingsLegend">
+                <wz-label>Gemini</wz-label>
+              </legend>
+              <div id="wazemySettings_gemini"></div>
+            </fieldset>
+          </div>
         </div>
       `;
       WazeWrap.Interface.ShowScriptUpdate(
@@ -59,6 +71,8 @@ function initializeWazeMY() {
         "https://greasyfork.org/en/scripts/404584-wazemy",
         "javascript:alert('No forum available');",
       );
+      console.info(["wme-wazemy", updateMessage]);
+
       const pluginManager = PluginManager.instance;
 
       pluginManager.addPlugin("copylatlon", "PluginCopyLatLon");
@@ -67,6 +81,8 @@ function initializeWazeMY() {
       pluginManager.addPlugin("kvmr", "PluginKVMR");
       pluginManager.addPlugin("zoompic", "PluginZoomPic");
       pluginManager.addPlugin("places", "PluginPlaces");
+      pluginManager.addPlugin("urs", "PluginURs");
+      pluginManager.addPlugin("gemini", "PluginGemini");
     },
   );
 }
