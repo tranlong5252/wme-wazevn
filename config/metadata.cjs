@@ -28,6 +28,7 @@ module.exports = {
     "jalanow.com",
     "llm.gov.my",
     "camera.thongtingiaothong.vn",
+    "https://giaothong.hochiminhcity.gov.vn:8007",
     "camera.0511.vn",
     "youtube.com"
   ],

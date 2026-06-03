@@ -506,7 +506,7 @@ export default class PluginTrafficCameras implements IPlugin {
       const staticImageEl = document.getElementById(
         "staticimage",
       ) as HTMLImageElement;
-      if (url.includes("youtube.com")) {
+      if (url != null && url.includes("youtube.com")) {
         const videoId = url.split("v=")[1];
         console.log(videoId);
         staticImageEl.outerHTML = `<iframe width="400" height="300" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>`;
