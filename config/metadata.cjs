@@ -30,7 +30,7 @@ module.exports = {
     "venue-image.waze.com",
     "generativelanguage.googleapis.com",
     "camera.thongtingiaothong.vn",
-    "https://giaothong.hochiminhcity.gov.vn:8007",
+    "giaothong.hochiminhcity.gov.vn",
     "camera.0511.vn",
     "youtube.com"
   ],

@@ -22,6 +22,17 @@ class TrafficCam {
   }
 }
 
+let trafficCamRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+let trafficCamRequestToken = 0;
+
+function clearTrafficCamRefreshState(): void {
+  if (trafficCamRefreshTimer) {
+    clearTimeout(trafficCamRefreshTimer);
+    trafficCamRefreshTimer = null;
+  }
+  trafficCamRequestToken += 1;
+}
+
 export default class PluginTrafficCameras implements IPlugin {
   private sdk: WmeSDK;
   private trafcamLayer: any;
@@ -273,6 +284,65 @@ export default class PluginTrafficCameras implements IPlugin {
   }
 
   popupCam(e: MouseEvent & { object: any }) {
+    function scheduleRefresh(refreshFn: () => void) {
+      if (trafficCamRefreshTimer) {
+        clearTimeout(trafficCamRefreshTimer);
+      }
+      trafficCamRefreshTimer = setTimeout(() => {
+        if (document.getElementById("gmPopupContainerCam")) {
+          refreshFn();
+        }
+      }, 5000);
+    }
+
+    function clearRefreshTimer() {
+      clearTrafficCamRefreshState();
+    }
+
+    function startCameraRequest() {
+      clearRefreshTimer();
+      return trafficCamRequestToken;
+    }
+
+    function isCurrentRequest(token: number) {
+      return (
+        token === trafficCamRequestToken &&
+        document.getElementById("gmPopupContainerCam")
+      );
+    }
+
+    function getSelectedCameraSource(): string | null {
+      const camSourceEl = document.getElementById(
+        "wazemy_camSource",
+      ) as HTMLSelectElement | null;
+      return camSourceEl?.value ?? null;
+    }
+
+    function refreshCurrentCamera() {
+      const source = getSelectedCameraSource();
+      const camId = document.getElementById("mycamid");
+      if (!source || !camId) return;
+
+      const camera = trafficCamsData[camId.innerText];
+      if (!camera) return;
+
+      switch (source) {
+        case "Jalanow":
+          popup_getJalanowImage(camera.url["Jalanow"]);
+          break;
+        case "LLM":
+          popup_getLLMImage(camera.url["LLM"]);
+          break;
+        case "HCMC":
+          popup_getHCMCImage(camera.url["HCMC"]);
+          break;
+        case "DaNang":
+          popup_getDaNangImage(camera.url["DaNang"]);
+          break;
+      }
+    }
+
+    clearTrafficCamRefreshState();
     popupCam_close(); // Close existing popup if already opened.
 
     var popupHTML = `<div id="gmPopupContainerCam" style="margin:1;text-align:center;padding:5px;z-index:1100;position:absolute;color:white;background:rgba(0,0,0,0.5)">
@@ -337,25 +407,28 @@ export default class PluginTrafficCameras implements IPlugin {
 
     camSourceEl.onchange = (e) => {
       console.log("PluginTrafficCameras: Camera source selection changed.");
-      const camId = document.getElementById("mycamid");
-
       const target = e.target as HTMLSelectElement;
-      switch (target.selectedOptions[0].innerText) {
-        case "Jalanow":
-          popup_getJalanowImage(
-            trafficCamsData[camId.innerText]["url"]["Jalanow"],
-          );
-          break;
-        case "LLM":
-          popup_getLLMImage(trafficCamsData[camId.innerText]["url"]["LLM"]);
-          break;
-        case "HCMC":
-          popup_getHCMCImage(trafficCamsData[camId.innerText]["url"]["HCMC"]);
-          break;
-        case "DaNang":
-          popup_getDaNangImage(
-            trafficCamsData[camId.innerText]["url"]["DaNang"],
-          );
+      if (target?.value) {
+        const camId = document.getElementById("mycamid");
+        if (!camId) return;
+
+        const camera = trafficCamsData[camId.innerText];
+        if (!camera) return;
+
+        switch (target.value) {
+          case "Jalanow":
+            popup_getJalanowImage(camera.url["Jalanow"]);
+            break;
+          case "LLM":
+            popup_getLLMImage(camera.url["LLM"]);
+            break;
+          case "HCMC":
+            popup_getHCMCImage(camera.url["HCMC"]);
+            break;
+          case "DaNang":
+            popup_getDaNangImage(camera.url["DaNang"]);
+            break;
+        }
       }
     };
 
@@ -369,11 +442,13 @@ export default class PluginTrafficCameras implements IPlugin {
         break;
       case "HCMC":
         popup_getHCMCImage(e.object.url["HCMC"]);
+        break;
       case "DaNang":
         popup_getDaNangImage(e.object.url["DaNang"]);
     }
 
     function popupCam_close() {
+      clearRefreshTimer();
       const popupContainerEl = document.getElementById("gmPopupContainerCam");
       if (popupContainerEl) {
         popupContainerEl.remove();
@@ -432,6 +507,7 @@ export default class PluginTrafficCameras implements IPlugin {
     }
 
     function popup_getJalanowImage(url: string) {
+      const token = startCameraRequest();
       GM_xmlhttpRequest({
         method: "GET",
         responseType: "blob",
@@ -443,23 +519,28 @@ export default class PluginTrafficCameras implements IPlugin {
         },
         url: url,
         onload: function (response) {
+          if (!isCurrentRequest(token)) return;
           const staticImageEl = document.getElementById(
             "staticimage",
           ) as HTMLImageElement;
           staticImageEl.src = URL.createObjectURL(response.response);
           document.getElementById("mycamstatus").innerHTML = "";
+          scheduleRefresh(refreshCurrentCamera);
         },
         onerror: function (response) {
+          if (!isCurrentRequest(token)) return;
           document.getElementById("mycamstatus").innerHTML =
             "Error loading image.";
         },
         onprogress: function (response) {
+          if (!isCurrentRequest(token)) return;
           document.getElementById("mycamstatus").innerHTML = "Loading image...";
         },
       });
     }
 
     function popup_getLLMImage(url: string): void {
+      const token = startCameraRequest();
       let camImg = url.split("|");
 
       GM_xmlhttpRequest({
@@ -467,6 +548,7 @@ export default class PluginTrafficCameras implements IPlugin {
         responseType: "blob",
         url: camImg[0],
         onload: function (response) {
+          if (!isCurrentRequest(token)) return;
           const re = new RegExp(
             'src="data:image/png;base64, ([A-Za-z0-9/+=]*)" title="' +
               camImg[1] +
@@ -478,18 +560,22 @@ export default class PluginTrafficCameras implements IPlugin {
           ) as HTMLImageElement;
           staticImageEl.src = "data:image/png;base64," + m[1];
           document.getElementById("mycamstatus").innerHTML = "";
+          scheduleRefresh(refreshCurrentCamera);
         },
         onerror: function (response) {
+          if (!isCurrentRequest(token)) return;
           document.getElementById("mycamstatus").innerHTML =
             "Error loading image.";
         },
         onprogress: function (response) {
+          if (!isCurrentRequest(token)) return;
           document.getElementById("mycamstatus").innerHTML = "Loading image...";
         },
       });
     }
 
     function popup_getHCMCImage(url: string) {
+      const token = startCameraRequest();
       GM_xmlhttpRequest({
         method: "GET",
         responseType: "blob",
@@ -499,23 +585,28 @@ export default class PluginTrafficCameras implements IPlugin {
         },
         url: url,
         onload: function (response) {
+          if (!isCurrentRequest(token)) return;
           const staticImageEl = document.getElementById(
             "staticimage",
           ) as HTMLImageElement;
           staticImageEl.src = URL.createObjectURL(response.response);
           document.getElementById("mycamstatus").innerHTML = "";
+          scheduleRefresh(() => popup_getHCMCImage(url));
         },
         onerror: function (response) {
+          if (!isCurrentRequest(token)) return;
           document.getElementById("mycamstatus").innerHTML =
             "Error loading image.";
         },
         onprogress: function (response) {
+          if (!isCurrentRequest(token)) return;
           document.getElementById("mycamstatus").innerHTML = "Loading image...";
         },
       });
     }
 
     function popup_getDaNangImage(url: string) {
+      const token = startCameraRequest();
       const staticImageEl = document.getElementById(
         "staticimage",
       ) as HTMLImageElement;
@@ -533,14 +624,18 @@ export default class PluginTrafficCameras implements IPlugin {
           },
           url: url,
           onload: function (response) {
+            if (!isCurrentRequest(token)) return;
             staticImageEl.src = URL.createObjectURL(response.response);
             document.getElementById("mycamstatus").innerHTML = "";
+            scheduleRefresh(refreshCurrentCamera);
           },
           onerror: function (response) {
+            if (!isCurrentRequest(token)) return;
             document.getElementById("mycamstatus").innerHTML =
               "Error loading image.";
           },
           onprogress: function (response) {
+            if (!isCurrentRequest(token)) return;
             document.getElementById("mycamstatus").innerHTML =
               "Loading image...";
           },
